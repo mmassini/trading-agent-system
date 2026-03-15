@@ -1,0 +1,32 @@
+name: Health Check
+
+on:
+  schedule:
+    # Every 15 minutes during US market hours (Mon-Fri 13:30-20:15 UTC)
+    - cron: "*/15 13-20 * * 1-5"
+
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: self-hosted
+    timeout-minutes: 5
+
+    steps:
+      - name: Check heartbeat
+        run: |
+          docker run --rm \
+            --name trading-healthcheck \
+            -e DB_PATH="/app/data/trading.db" \
+            -v trading-data:/app/data \
+            ghcr.io/${{ github.repository }}/trading-bot:latest \
+            python scripts/healthcheck.py --max-age-seconds=180
+        continue-on-error: true
+
+      - name: Alert if unhealthy
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=%E2%9A%A0%EF%B8%8F+HEALTH+CHECK+FAILED%0ATrading+bot+may+be+down.+Check+GitHub+Actions." \
+            -d "parse_mode=HTML"

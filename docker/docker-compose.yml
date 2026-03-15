@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  trading-bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../.env
+    volumes:
+      - trading-data:/app/data
+    restart: unless-stopped
+
+  # Run a single report manually:
+  # docker compose run --rm reporter
+  reporter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../.env
+    volumes:
+      - trading-data:/app/data
+    command: python -m agents.reporting.reporting_agent --mode=send
+    profiles:
+      - tools
+
+volumes:
+  trading-data:
+    driver: local

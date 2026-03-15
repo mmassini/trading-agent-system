@@ -1,0 +1,55 @@
+name: Trading Session
+
+# IMPORTANT: This workflow requires a self-hosted runner with Docker installed.
+# GitHub-hosted runners have a 6-hour timeout; US market session is ~6.5 hours.
+#
+# Self-hosted runner setup:
+#   1. On your VPS/server: Settings → Actions → Runners → New self-hosted runner
+#   2. Install runner, configure as a service (sudo ./svc.sh install)
+#   3. Install Docker on the runner machine
+#   4. Create a named Docker volume: docker volume create trading-data
+
+on:
+  schedule:
+    # US market open (9:35am ET = 13:35 UTC) — Mon-Fri
+    # Note: cron does not support day-of-week AND time filtering perfectly,
+    # session_manager.py handles the actual session gating internally.
+    - cron: "35 13 * * 1-5"
+
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no real orders)"
+        required: false
+        default: "false"
+
+jobs:
+  trade:
+    runs-on: self-hosted
+    timeout-minutes: 420    # 7 hours max
+
+    steps:
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ github.repository }}/trading-bot:latest
+
+      - name: Run trading session
+        run: |
+          docker run --rm \
+            --name trading-bot \
+            -e ALPACA_API_KEY="${{ secrets.ALPACA_API_KEY }}" \
+            -e ALPACA_SECRET_KEY="${{ secrets.ALPACA_SECRET_KEY }}" \
+            -e ALPACA_PAPER="${{ secrets.ALPACA_PAPER }}" \
+            -e OANDA_ACCESS_TOKEN="${{ secrets.OANDA_ACCESS_TOKEN }}" \
+            -e OANDA_ACCOUNT_ID="${{ secrets.OANDA_ACCOUNT_ID }}" \
+            -e OANDA_ENVIRONMENT="${{ secrets.OANDA_ENVIRONMENT }}" \
+            -e ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
+            -e NEWSAPI_KEY="${{ secrets.NEWSAPI_KEY }}" \
+            -e TWITTER_BEARER_TOKEN="${{ secrets.TWITTER_BEARER_TOKEN }}" \
+            -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+            -e TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -e DB_PATH="/app/data/trading.db" \
+            -e LOG_LEVEL="INFO" \
+            -v trading-data:/app/data \
+            ghcr.io/${{ github.repository }}/trading-bot:latest \
+            python main.py

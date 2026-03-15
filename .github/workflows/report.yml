@@ -1,0 +1,28 @@
+name: 12-Hour Report
+
+on:
+  schedule:
+    - cron: "0 6 * * *"    # 06:00 UTC (overnight report)
+    - cron: "0 18 * * *"   # 18:00 UTC (afternoon report)
+
+  workflow_dispatch:        # Manual trigger for testing
+
+jobs:
+  report:
+    runs-on: self-hosted
+    timeout-minutes: 10
+
+    steps:
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ github.repository }}/trading-bot:latest
+
+      - name: Send Telegram report
+        run: |
+          docker run --rm \
+            --name trading-reporter \
+            -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+            -e TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -e DB_PATH="/app/data/trading.db" \
+            -v trading-data:/app/data \
+            ghcr.io/${{ github.repository }}/trading-bot:latest \
+            python -m agents.reporting.reporting_agent --mode=send

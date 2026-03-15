@@ -1,0 +1,48 @@
+name: Weekly Model Retrain
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"    # Sunday 02:00 UTC (market closed)
+
+  workflow_dispatch:        # Manual trigger
+
+jobs:
+  retrain:
+    runs-on: self-hosted
+    timeout-minutes: 180    # 3 hours max for retraining
+
+    steps:
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ github.repository }}/trading-bot:latest
+
+      - name: Run full retrain
+        run: |
+          docker run --rm \
+            --name trading-retrain \
+            -e ALPACA_API_KEY="${{ secrets.ALPACA_API_KEY }}" \
+            -e ALPACA_SECRET_KEY="${{ secrets.ALPACA_SECRET_KEY }}" \
+            -e OANDA_ACCESS_TOKEN="${{ secrets.OANDA_ACCESS_TOKEN }}" \
+            -e OANDA_ACCOUNT_ID="${{ secrets.OANDA_ACCOUNT_ID }}" \
+            -e OANDA_ENVIRONMENT="${{ secrets.OANDA_ENVIRONMENT }}" \
+            -e TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+            -e TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -e DB_PATH="/app/data/trading.db" \
+            -v trading-data:/app/data \
+            ghcr.io/${{ github.repository }}/trading-bot:latest \
+            python -c "
+          import sys, os
+          sys.path.insert(0, '/app')
+          from storage.database import Database
+          from agents.ml_analysis.model_registry import ModelRegistry
+          from agents.postmortem.retrain_pipeline import run_retrain
+          import asyncio
+
+          db = Database(os.environ.get('DB_PATH', 'data/trading.db'))
+          registry = ModelRegistry()
+
+          for model_type in ['stock', 'forex']:
+              print(f'Retraining {model_type} model...')
+              run_retrain(db=db, registry=registry, model_type=model_type)
+
+          print('Retrain complete.')
+          "

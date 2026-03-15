@@ -1,0 +1,26 @@
+# Risk parameters — override via environment variables in Settings if needed.
+
+position_sizing:
+  max_risk_per_trade_pct: 0.02     # 2% of portfolio per trade
+  atr_period: 14
+  atr_stop_multiplier: 1.5         # stop = entry ± (ATR × 1.5)
+  reward_risk_ratio: 2.0           # TP = 2× stop distance (2:1 R:R)
+  min_quantity: 1                  # Minimum order size (shares / units)
+
+exposure:
+  max_concurrent_positions: 3
+  max_single_stock_pct: 0.10       # Max 10% of portfolio in one stock
+  max_daily_drawdown_pct: 0.06     # Halt if daily P&L < -6%
+
+signal:
+  min_confidence: 0.65             # XGBoost predict_proba threshold
+  horizon_minutes: 5               # Primary prediction horizon
+
+retraining:
+  trigger_after_trades: 50
+  lookback_days: 90
+  train_window_days: 60
+  validation_window_days: 10
+  holdout_days: 20
+  min_sharpe_improvement: 0.05     # New model must beat champion by 5%
+  optuna_trials: 30

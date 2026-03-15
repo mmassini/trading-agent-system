@@ -1,0 +1,33 @@
+# Instruments traded by the system.
+# Stocks: traded via Alpaca (US market hours only)
+# Forex: traded via OANDA (24/5, avoid Sunday open + Friday close)
+
+stocks:
+  - AAPL
+  - MSFT
+  - NVDA
+  - TSLA
+  - SPY    # S&P 500 ETF
+  - QQQ    # Nasdaq-100 ETF
+
+forex:
+  - EUR_USD
+  - GBP_USD
+  - USD_JPY
+  - AUD_USD
+
+# Market session configuration (all times UTC)
+sessions:
+  stocks:
+    open_utc: "13:30"   # 9:30am ET
+    close_utc: "20:00"  # 4:00pm ET
+    blackout_minutes: 5  # No trades first/last 5 min
+
+  forex:
+    # OANDA is 24/5. Avoid:
+    # - Sunday 21:00–22:00 UTC (market open gap risk)
+    # - Friday 21:00+ UTC (closing liquidity)
+    blackout_days: ["Saturday"]
+    blackout_windows:
+      - { day: "Sunday", start_utc: "20:00", end_utc: "22:00" }
+      - { day: "Friday", start_utc: "21:00", end_utc: "23:59" }

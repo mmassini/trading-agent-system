@@ -1,0 +1,47 @@
+# ── Brokers ───────────────────────────────────────────────────────────────────
+alpaca-py>=0.20.0
+oandapyV20>=0.6.3
+
+# ── AI / Claude Agent SDK ─────────────────────────────────────────────────────
+anthropic>=0.40.0
+claude-agent-sdk>=0.0.9
+
+# ── ML ────────────────────────────────────────────────────────────────────────
+xgboost>=2.0.0
+scikit-learn>=1.4.0
+pandas-ta>=0.3.14b0
+pandas>=2.1.0
+numpy>=1.26.0
+optuna>=3.5.0
+
+# ── Sentiment ─────────────────────────────────────────────────────────────────
+transformers>=4.37.0
+torch>=2.2.0              # CPU-only; override in Dockerfile for GPU if available
+newsapi-python>=0.2.7
+tweepy>=4.14.0
+praw>=7.7.1               # Reddit (free, no API key needed for read-only)
+
+# ── Storage ───────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.0
+
+# ── Notifications ─────────────────────────────────────────────────────────────
+python-telegram-bot>=21.0.0
+
+# ── Config ────────────────────────────────────────────────────────────────────
+pydantic-settings>=2.1.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# ── Visualization (reports) ───────────────────────────────────────────────────
+matplotlib>=3.8.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+aiohttp>=3.9.0
+pytz>=2024.1
+python-dateutil>=2.8.2
+cachetools>=5.3.0         # TTL cache for sentiment
+filelock>=3.13.0          # Model hot-reload lock
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
