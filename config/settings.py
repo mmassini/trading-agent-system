@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     alpaca_secret_key: str
     alpaca_paper: bool = True
 
-    oanda_access_token: str
-    oanda_account_id: str
-    oanda_environment: str = "practice"  # "practice" | "live"
+    oanda_access_token: str = ""   # Optional: leave empty to disable forex
+    oanda_account_id: str = ""
+    oanda_environment: str = "practice"
 
     # ── AI / Claude ───────────────────────────────────────────────────────────
     anthropic_api_key: str

@@ -76,13 +76,15 @@ class OrchestratorAgent:
             paper=settings.alpaca_paper,
         )
 
+        # OANDA only initialized if credentials are provided and forex list is non-empty
+        self._oanda_enabled = bool(settings.oanda_access_token and self._forex)
         self._oanda_stream = OandaStreamHandler(
             access_token=settings.oanda_access_token,
             account_id=settings.oanda_account_id,
-            instruments=self._forex,
+            instruments=self._forex if self._oanda_enabled else [],
             aggregator=self._aggregator,
             environment=settings.oanda_environment,
-        )
+        ) if self._oanda_enabled else None
 
         # ── Broker executors ──────────────────────────────────────────────
         self._alpaca_exec = AlpacaExecutor(
@@ -94,7 +96,7 @@ class OrchestratorAgent:
             access_token=settings.oanda_access_token,
             account_id=settings.oanda_account_id,
             environment=settings.oanda_environment,
-        )
+        ) if self._oanda_enabled else None
 
         # ── Agents ────────────────────────────────────────────────────────
         self._session = SessionManager(
@@ -141,9 +143,10 @@ class OrchestratorAgent:
         threading.Thread(
             target=self._alpaca_stream.start, daemon=True, name="AlpacaStream"
         ).start()
-        threading.Thread(
-            target=self._oanda_stream.start, daemon=True, name="OandaStream"
-        ).start()
+        if self._oanda_stream:
+            threading.Thread(
+                target=self._oanda_stream.start, daemon=True, name="OandaStream"
+            ).start()
 
         # Start order tracker
         self._order_tracker.start()
@@ -277,7 +280,7 @@ class OrchestratorAgent:
         # Fallback: query brokers directly
         try:
             alpaca_bal = self._alpaca_exec.get_account_balance()
-            oanda_bal = self._oanda_exec.get_account_balance()
+            oanda_bal = self._oanda_exec.get_account_balance() if self._oanda_exec else 0.0
             return alpaca_bal + oanda_bal
         except Exception:
             return 0.0
@@ -303,6 +306,7 @@ class OrchestratorAgent:
     def stop(self):
         self._running = False
         self._alpaca_stream.stop()
-        self._oanda_stream.stop()
+        if self._oanda_stream:
+            self._oanda_stream.stop()
         self._order_tracker.stop()
         logger.info("Orchestrator stopped.")
