@@ -2,8 +2,8 @@ name: 12-Hour Report
 
 on:
   schedule:
-    - cron: "0 6 * * *"    # 06:00 UTC
-    - cron: "0 18 * * *"   # 18:00 UTC
+    - cron: "0 6 * * *"
+    - cron: "0 18 * * *"
   workflow_dispatch:
 
 jobs:
@@ -14,17 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python3 -m pip install -r requirements.txt
 
       - name: Send Telegram report
-        run: python -m agents.reporting.reporting_agent --mode=send
+        run: python3 -m agents.reporting.reporting_agent --mode=send
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

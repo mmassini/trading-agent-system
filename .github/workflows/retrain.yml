@@ -2,7 +2,7 @@ name: Weekly Model Retrain
 
 on:
   schedule:
-    - cron: "0 2 * * 0"    # Sunday 02:00 UTC
+    - cron: "0 2 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -13,29 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python3 -m pip install -r requirements.txt
 
       - name: Run retrain
         run: |
-          python -c "
+          python3 -c "
           import os, sys
           sys.path.insert(0, '.')
           from storage.database import Database
           from agents.ml_analysis.model_registry import ModelRegistry
           from agents.postmortem.retrain_pipeline import run_retrain
-
           db = Database(os.environ.get('DB_PATH', 'data/trading.db'))
           registry = ModelRegistry()
-          for model_type in ['stock']:
-              print(f'Retraining {model_type} model...')
-              run_retrain(db=db, registry=registry, model_type=model_type)
+          run_retrain(db=db, registry=registry, model_type='stock')
           print('Done.')
           "
         env:

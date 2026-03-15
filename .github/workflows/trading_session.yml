@@ -1,8 +1,5 @@
 name: Trading Session
 
-# Runs on your Mac (self-hosted runner) — no Docker needed.
-# Runner must be online during US market hours (9:30am-4pm ET / 13:30-20:00 UTC).
-
 on:
   schedule:
     - cron: "35 13 * * 1-5"   # 9:35am ET Mon-Fri
@@ -11,27 +8,21 @@ on:
 jobs:
   trade:
     runs-on: self-hosted
-    timeout-minutes: 420       # 7 hours max
+    timeout-minutes: 420
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python3 -m pip install -r requirements.txt
 
       - name: Bootstrap database
-        run: python scripts/bootstrap_db.py
+        run: python3 scripts/bootstrap_db.py
         env:
           DB_PATH: ${{ github.workspace }}/data/trading.db
 
       - name: Run trading session
-        run: python main.py
+        run: python3 main.py
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
