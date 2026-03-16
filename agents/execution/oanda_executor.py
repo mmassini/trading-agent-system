@@ -6,7 +6,7 @@ from typing import Optional
 
 import oandapyV20
 from oandapyV20.endpoints.orders import OrderCreate
-from oandapyV20.endpoints.trades import TradeCRCDO, TradesOpen
+from oandapyV20.endpoints.trades import TradeCRCDO, OpenTrades
 from oandapyV20.endpoints.accounts import AccountDetails
 
 from agents.risk.position_sizer import OrderSpec
@@ -96,7 +96,7 @@ class OandaExecutor:
 
     def get_open_trades(self) -> list[dict]:
         try:
-            r = TradesOpen(accountID=self._account_id)
+            r = OpenTrades(accountID=self._account_id)
             self._api.request(r)
             trades = r.response.get("trades", [])
             return [
