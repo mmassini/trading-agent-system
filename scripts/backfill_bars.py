@@ -45,7 +45,7 @@ def backfill_stocks(symbols: list[str], days: int, db):
                 end=end,
             )
             bars = client.get_stock_bars(req)
-            bar_list = bars[symbol] if symbol in bars else []
+            bar_list = bars.data.get(symbol, [])
 
             with db.session() as s:
                 for bar in bar_list:
