@@ -114,8 +114,9 @@ class ModelRegistry:
         lock = FileLock(str(path) + ".lock", timeout=LOCK_TIMEOUT)
 
         with lock:
-            # Write to temp file first, then atomic rename
-            tmp_path = path.with_suffix(".tmp")
+            # Write to temp file first, then atomic rename.
+            # Must keep .json extension so XGBoost saves in JSON (not binary) format.
+            tmp_path = path.with_name(path.stem + "_tmp.json")
             model.save(str(tmp_path))
             tmp_path.replace(path)
 
