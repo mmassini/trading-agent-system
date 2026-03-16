@@ -21,6 +21,7 @@ def backfill_stocks(symbols: list[str], days: int, db):
     from alpaca.data.historical import StockHistoricalDataClient
     from alpaca.data.requests import StockBarsRequest
     from alpaca.data.timeframe import TimeFrame
+    from alpaca.data.enums import DataFeed
     from storage.schema import Bar
 
     api_key = os.environ["ALPACA_API_KEY"]
@@ -38,6 +39,7 @@ def backfill_stocks(symbols: list[str], days: int, db):
                 timeframe=TimeFrame.Minute,
                 start=start,
                 end=end,
+                feed=DataFeed.IEX,
             )
             bars = client.get_stock_bars(req)
             bar_list = bars[symbol] if symbol in bars else []
@@ -126,7 +128,8 @@ def main():
         instruments = yaml.safe_load(f)
 
     backfill_stocks(instruments["stocks"], args.days, db)
-    backfill_forex(instruments["forex"], args.days, db)
+    if instruments.get("forex"):
+        backfill_forex(instruments["forex"], args.days, db)
     logger.info("Backfill complete.")
 
 
