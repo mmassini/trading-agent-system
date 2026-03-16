@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     max_risk_per_trade: float = Field(default=0.02, description="2% of portfolio")
     max_daily_drawdown: float = Field(default=0.06, description="6% halt trigger")
     max_concurrent_positions: int = Field(default=3)
-    min_signal_confidence: float = Field(default=0.65, description="XGBoost threshold")
+    min_signal_confidence: float = Field(default=0.60, description="XGBoost threshold")
     atr_stop_multiplier: float = Field(default=1.5, description="Stop = 1.5×ATR")
     reward_risk_ratio: float = Field(default=2.0, description="TP = 2× stop distance")
     session_blackout_minutes: int = Field(default=5, description="No trades first/last N min")

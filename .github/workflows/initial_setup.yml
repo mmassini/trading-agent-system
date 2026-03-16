@@ -6,7 +6,7 @@ on:
       days:
         description: 'Days of historical data to backfill'
         required: false
-        default: '90'
+        default: '180'
 
 jobs:
   setup:
@@ -27,7 +27,7 @@ jobs:
           DB_PATH: ${{ github.workspace }}/data/trading.db
 
       - name: Backfill historical bars
-        run: python3 scripts/backfill_bars.py --days=${{ github.event.inputs.days || '90' }}
+        run: python3 scripts/backfill_bars.py --days=${{ github.event.inputs.days || '180' }}
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
