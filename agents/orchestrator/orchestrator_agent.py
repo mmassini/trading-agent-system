@@ -166,7 +166,12 @@ class OrchestratorAgent:
         session_started_notified = False
 
         while self._running:
-            market_active = self._session.is_stock_session_active()
+            try:
+                market_active = self._session.is_stock_session_active()
+            except Exception as exc:
+                logger.error("Session check error: %s", exc, exc_info=True)
+                await asyncio.sleep(DECISION_INTERVAL_SECONDS)
+                continue
 
             # Notify Telegram when market session begins
             if market_active and not session_started_notified:
@@ -191,14 +196,23 @@ class OrchestratorAgent:
                 await self._decision_cycle()
             except Exception as exc:
                 logger.error("Decision cycle error: %s", exc, exc_info=True)
+                await self._telegram.send_message(f"⚠️ Decision cycle error: {exc}")
 
             # Heartbeat every N cycles
             heartbeat_counter += 1
             if heartbeat_counter * DECISION_INTERVAL_SECONDS >= HEARTBEAT_INTERVAL_SECONDS:
-                self._db.record_heartbeat("orchestrator", "ok")
+                try:
+                    self._db.record_heartbeat("orchestrator", "ok")
+                except Exception:
+                    pass
                 heartbeat_counter = 0
 
-            await asyncio.sleep(DECISION_INTERVAL_SECONDS)
+            try:
+                await asyncio.sleep(DECISION_INTERVAL_SECONDS)
+            except asyncio.CancelledError:
+                logger.info("Main loop cancelled — shutting down.")
+                self._running = False
+                break
 
     async def _decision_cycle(self):
         """
