@@ -42,6 +42,16 @@ def challenge_champion(
         model_type, champion_sharpe, challenger_sharpe,
     )
 
+    # If no model file exists on disk, always promote (bootstrap case)
+    from agents.ml_analysis.model_registry import CHAMPION_DIR, STOCK_MODEL_FILE, FOREX_MODEL_FILE
+    from pathlib import Path
+    model_file = STOCK_MODEL_FILE if model_type == "stock" else FOREX_MODEL_FILE
+    model_exists = (Path(CHAMPION_DIR) / model_file).exists()
+    if not model_exists:
+        logger.info("No existing champion model file — auto-promoting challenger.")
+        registry.save_champion(challenger_model, model_type, challenger_metrics)
+        return True
+
     # Challenger must beat champion by MIN_IMPROVEMENT on Sharpe
     sharpe_threshold = champion_sharpe * (1 + MIN_IMPROVEMENT)
     beats_sharpe = challenger_sharpe >= sharpe_threshold
