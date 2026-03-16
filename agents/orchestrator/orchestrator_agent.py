@@ -157,8 +157,21 @@ class OrchestratorAgent:
     async def _main_loop(self):
         """Async main loop: runs the decision cycle every 30 seconds."""
         heartbeat_counter = 0
+        market_was_active = False
 
         while self._running:
+            market_active = self._session.is_stock_session_active()
+
+            # Detect market close transition → EOD cleanup then exit
+            if market_was_active and not market_active:
+                logger.info("Market closed — running EOD position close.")
+                await self._eod_close()
+                logger.info("EOD complete. Shutting down.")
+                self._running = False
+                break
+
+            market_was_active = market_active
+
             try:
                 await self._decision_cycle()
             except Exception as exc:
@@ -272,6 +285,17 @@ class OrchestratorAgent:
         """Trigger retraining if threshold reached."""
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._postmortem.check_retrain_threshold)
+
+    async def _eod_close(self):
+        """Close all open positions at end of day."""
+        try:
+            n = self._alpaca_exec.close_all_positions()
+            if n:
+                logger.info("EOD: %d Alpaca position(s) closed.", n)
+            else:
+                logger.info("EOD: no open positions to close.")
+        except Exception as exc:
+            logger.error("EOD close error: %s", exc)
 
     def _get_combined_balance(self) -> float:
         balance = self._db.get_latest_balance("combined")

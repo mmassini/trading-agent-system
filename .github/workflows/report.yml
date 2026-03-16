@@ -1,9 +1,8 @@
-name: 12-Hour Report
+name: 2-Hour Report
 
 on:
   schedule:
-    - cron: "0 6 * * *"
-    - cron: "0 18 * * *"
+    - cron: "0 */2 * * *"
   workflow_dispatch:
 
 jobs:

@@ -70,6 +70,23 @@ class AlpacaExecutor:
             logger.error("Failed to get Alpaca balance: %s", exc)
             return 0.0
 
+    def close_all_positions(self) -> int:
+        """
+        Close all open positions at market price (EOD cleanup).
+        Also cancels any open orders.
+        Returns number of positions closed.
+        """
+        try:
+            positions = self._client.get_all_positions()
+            if not positions:
+                return 0
+            self._client.close_all_positions(cancel_orders=True)
+            logger.info("EOD: closed %d position(s)", len(positions))
+            return len(positions)
+        except Exception as exc:
+            logger.error("Failed to close all positions: %s", exc)
+            return 0
+
     def get_open_positions(self) -> list[dict]:
         try:
             positions = self._client.get_all_positions()
