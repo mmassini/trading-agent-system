@@ -2,7 +2,8 @@ name: 2-Hour Report
 
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    # Every 2 hours on weekdays, 14:00–22:00 UTC (10am–6pm ET)
+    - cron: "0 14,16,18,20,22 * * 1-5"
   workflow_dispatch:
 
 jobs:
