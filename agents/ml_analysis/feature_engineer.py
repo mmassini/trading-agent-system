@@ -7,7 +7,10 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+import ta.momentum as tam
+import ta.trend as tat
+import ta.volatility as tav
+import ta.volume as tavol
 
 logger = logging.getLogger(__name__)
 
@@ -82,57 +85,42 @@ def build_features(
     df["volume_spike"] = (df["volume_ratio"] > 2.0).astype(float)
 
     # ── Momentum ──────────────────────────────────────────────────────────────
-    rsi14 = ta.rsi(c, length=14)
-    rsi7 = ta.rsi(c, length=7)
-    df["rsi_14"] = rsi14
-    df["rsi_7"] = rsi7
+    df["rsi_14"] = tam.RSIIndicator(c, window=14).rsi()
+    df["rsi_7"] = tam.RSIIndicator(c, window=7).rsi()
 
-    stoch = ta.stoch(h, lo, c, k=5, d=3, smooth_k=3)
-    df["stoch_k"] = stoch["STOCHk_5_3_3"] if stoch is not None else np.nan
-    df["stoch_d"] = stoch["STOCHd_5_3_3"] if stoch is not None else np.nan
+    stoch = tam.StochasticOscillator(h, lo, c, window=5, smooth_window=3)
+    df["stoch_k"] = stoch.stoch()
+    df["stoch_d"] = stoch.stoch_signal()
 
-    df["cci_14"] = ta.cci(h, lo, c, length=14)
-    df["roc_5"] = ta.roc(c, length=5)
-    df["mom_10"] = ta.mom(c, length=10)
+    df["cci_14"] = tat.CCIIndicator(h, lo, c, window=14).cci()
+    df["roc_5"] = tam.ROCIndicator(c, window=5).roc()
+    df["mom_10"] = c.diff(10)  # Momentum = price difference over N periods
 
     # ── Trend ─────────────────────────────────────────────────────────────────
-    ema9 = ta.ema(c, length=9)
-    ema21 = ta.ema(c, length=21)
+    ema9 = c.ewm(span=9, adjust=False).mean()
+    ema21 = c.ewm(span=21, adjust=False).mean()
     df["ema_9"] = ema9
     df["ema_21"] = ema21
     df["ema_cross"] = (ema9 - ema21) / c
 
-    macd_df = ta.macd(c, fast=12, slow=26, signal=9)
-    if macd_df is not None:
-        df["macd"] = macd_df["MACD_12_26_9"]
-        df["macd_signal"] = macd_df["MACDs_12_26_9"]
-        df["macd_hist"] = macd_df["MACDh_12_26_9"]
-    else:
-        df["macd"] = df["macd_signal"] = df["macd_hist"] = np.nan
+    macd_ind = tat.MACD(c, window_fast=12, window_slow=26, window_sign=9)
+    df["macd"] = macd_ind.macd()
+    df["macd_signal"] = macd_ind.macd_signal()
+    df["macd_hist"] = macd_ind.macd_diff()
 
-    adx_df = ta.adx(h, lo, c, length=14)
-    df["adx_14"] = adx_df["ADX_14"] if adx_df is not None else np.nan
+    df["adx_14"] = tat.ADXIndicator(h, lo, c, window=14).adx()
 
-    psar_df = ta.psar(h, lo, c)
-    if psar_df is not None:
-        psar_col = [col for col in psar_df.columns if "PSARl" in col or "PSARs" in col]
-        psar_vals = psar_df[psar_col[0]] if psar_col else np.nan
-        df["psar_dist"] = (c - psar_vals) / c
-    else:
-        df["psar_dist"] = np.nan
+    psar = tat.PSARIndicator(h, lo, c)
+    psar_vals = psar.psar()
+    df["psar_dist"] = (c - psar_vals) / c
 
     # ── Volatility ────────────────────────────────────────────────────────────
-    df["atr_14"] = ta.atr(h, lo, c, length=14)
+    df["atr_14"] = tav.AverageTrueRange(h, lo, c, window=14).average_true_range()
     df["natr_14"] = df["atr_14"] / c
 
-    bb = ta.bbands(c, length=20, std=2)
-    if bb is not None:
-        df["bb_pct_b"] = bb["BBP_20_2.0"]
-        bb_upper = bb["BBU_20_2.0"]
-        bb_lower = bb["BBL_20_2.0"]
-        df["bb_width"] = (bb_upper - bb_lower) / c
-    else:
-        df["bb_pct_b"] = df["bb_width"] = np.nan
+    bb = tav.BollingerBands(c, window=20, window_dev=2)
+    df["bb_pct_b"] = bb.bollinger_pband()
+    df["bb_width"] = (bb.bollinger_hband() - bb.bollinger_lband()) / c
 
     # ── Volume-based ──────────────────────────────────────────────────────────
     # VWAP: approximate intraday VWAP using cumulative method
@@ -142,10 +130,10 @@ def build_features(
     vwap = cum_tp_vol / cum_vol.replace(0, np.nan)
     df["vwap_dist"] = (c - vwap) / c
 
-    obv = ta.obv(c, v)
+    obv = tavol.OnBalanceVolumeIndicator(c, v).on_balance_volume()
     df["obv_slope_5"] = obv.diff(5) / (obv.abs().rolling(5).mean().replace(0, np.nan))
 
-    df["cmf_14"] = ta.cmf(h, lo, c, v, length=14)
+    df["cmf_14"] = tavol.ChaikinMoneyFlowIndicator(h, lo, c, v, window=14).chaikin_money_flow()
 
     # ── Sentiment (injected externally) ──────────────────────────────────────
     df["sentiment_score"] = sentiment_score
