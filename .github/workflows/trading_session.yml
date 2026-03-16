@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Install dependencies
         run: python3 -m pip install -r requirements.txt

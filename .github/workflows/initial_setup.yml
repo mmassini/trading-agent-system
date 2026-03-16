@@ -1,0 +1,79 @@
+name: Initial Setup (Backfill + Train)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Days of historical data to backfill'
+        required: false
+        default: '90'
+
+jobs:
+  setup:
+    runs-on: self-hosted
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Bootstrap database
+        run: python3 scripts/bootstrap_db.py
+        env:
+          DB_PATH: ${{ github.workspace }}/data/trading.db
+
+      - name: Backfill historical bars
+        run: python3 scripts/backfill_bars.py --days=${{ github.event.inputs.days || '90' }}
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          DB_PATH: ${{ github.workspace }}/data/trading.db
+
+      - name: Train initial champion model
+        run: |
+          python3 -c "
+          import os, sys
+          sys.path.insert(0, '.')
+          from storage.database import Database
+          from agents.ml_analysis.model_registry import ModelRegistry
+          from agents.postmortem.retrain_pipeline import run_retrain
+          db = Database(os.environ.get('DB_PATH', 'data/trading.db'))
+          registry = ModelRegistry()
+          run_retrain(db=db, registry=registry, model_type='stock')
+          print('Initial model training complete.')
+          "
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          DB_PATH: ${{ github.workspace }}/data/trading.db
+
+      - name: Verify model exists
+        run: |
+          if [ -f "models/champion/xgb_stock_model.json" ]; then
+            echo "Model file created successfully."
+            ls -lh models/champion/
+          else
+            echo "ERROR: Model file not found!" && exit 1
+          fi
+
+      - name: Notify Telegram
+        run: |
+          python3 -c "
+          import os, asyncio
+          sys = __import__('sys')
+          sys.path.insert(0, '.')
+          from agents.reporting.telegram_client import TelegramClient
+          client = TelegramClient(
+              bot_token=os.environ['TELEGRAM_BOT_TOKEN'],
+              chat_id=os.environ['TELEGRAM_CHAT_ID'],
+          )
+          asyncio.run(client.send_message('Initial setup complete. Champion model trained and ready.'))
+          "
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        continue-on-error: true
