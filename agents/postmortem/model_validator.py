@@ -44,7 +44,6 @@ def challenge_champion(
 
     # If no model file exists on disk, always promote (bootstrap case)
     from agents.ml_analysis.model_registry import CHAMPION_DIR, STOCK_MODEL_FILE, FOREX_MODEL_FILE
-    from pathlib import Path
     model_file = STOCK_MODEL_FILE if model_type == "stock" else FOREX_MODEL_FILE
     model_exists = (Path(CHAMPION_DIR) / model_file).exists()
     if not model_exists:
