@@ -27,7 +27,12 @@ def backfill_stocks(symbols: list[str], days: int, db):
     secret = os.environ["ALPACA_SECRET_KEY"]
     client = StockHistoricalDataClient(api_key, secret)
 
-    end = datetime.now(timezone.utc)
+    # End at yesterday's market close (20:00 UTC) to avoid free-tier
+    # restriction on querying "recent" SIP data (last ~15 min)
+    now = datetime.now(timezone.utc)
+    end = now.replace(hour=20, minute=0, second=0, microsecond=0)
+    if end >= now:
+        end = end - timedelta(days=1)
     start = end - timedelta(days=days)
 
     for symbol in symbols:

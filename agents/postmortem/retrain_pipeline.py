@@ -60,8 +60,7 @@ def run_retrain(
         rows = result.fetchall()
 
     if len(rows) < 500:
-        logger.warning("Not enough data for retraining (%d rows)", len(rows))
-        return
+        raise RuntimeError(f"Not enough data for retraining: {len(rows)} rows (need 500+). Run backfill first.")
 
     # ── 2. Group by symbol and build features ────────────────────────────────
     df_all = pd.DataFrame(rows, columns=["symbol", "open", "high", "low", "close", "volume", "timestamp"])
