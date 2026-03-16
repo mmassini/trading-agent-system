@@ -9,7 +9,7 @@ claude-agent-sdk>=0.0.9
 # ── ML ────────────────────────────────────────────────────────────────────────
 xgboost>=2.0.0
 scikit-learn>=1.4.0
-pandas-ta>=0.3.14b0
+git+https://github.com/twopirllc/pandas-ta.git@development
 pandas>=2.1.0
 numpy>=1.26.0
 optuna>=3.5.0
