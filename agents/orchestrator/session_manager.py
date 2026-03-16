@@ -8,7 +8,7 @@ Rules:
   - Daily drawdown halt overrides everything
 """
 import logging
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 
 import pytz
 
@@ -38,9 +38,12 @@ class SessionManager:
 
         now_time = now.time().replace(second=0, microsecond=0)
 
-        # NYSE hours (UTC): 13:30 – 20:00
-        open_time = time(NYSE_OPEN_UTC.hour, NYSE_OPEN_UTC.minute + self._blackout)
-        close_time = time(NYSE_CLOSE_UTC.hour, NYSE_CLOSE_UTC.minute - self._blackout)
+        # NYSE hours (UTC): 13:30 – 20:00, adjusted for blackout window
+        _base = datetime(2000, 1, 1)
+        open_time = (_base.replace(hour=NYSE_OPEN_UTC.hour, minute=NYSE_OPEN_UTC.minute)
+                     + timedelta(minutes=self._blackout)).time()
+        close_time = (_base.replace(hour=NYSE_CLOSE_UTC.hour, minute=NYSE_CLOSE_UTC.minute)
+                      - timedelta(minutes=self._blackout)).time()
 
         if open_time <= now_time <= close_time:
             return True
@@ -85,12 +88,13 @@ class SessionManager:
             return 0
 
         now = datetime.now(timezone.utc)
+        from datetime import timedelta
         next_open = now.replace(
             hour=NYSE_OPEN_UTC.hour,
-            minute=NYSE_OPEN_UTC.minute + self._blackout,
+            minute=NYSE_OPEN_UTC.minute,
             second=0,
             microsecond=0,
-        )
+        ) + timedelta(minutes=self._blackout)
 
         # If past today's open, move to next business day
         if now.time() >= time(NYSE_CLOSE_UTC.hour, NYSE_CLOSE_UTC.minute):

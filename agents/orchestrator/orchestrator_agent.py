@@ -32,6 +32,7 @@ from agents.ml_analysis.model_registry import ModelRegistry
 from agents.orchestrator.session_manager import SessionManager
 from agents.postmortem.postmortem_agent import PostMortemAgent
 from agents.risk.risk_agent import RiskAgent
+from agents.reporting.telegram_client import TelegramClient
 from agents.sentiment.sentiment_agent import SentimentAgent
 from config.settings import Settings
 from storage.database import Database
@@ -125,6 +126,10 @@ class OrchestratorAgent:
             db=self._db,
             settings=settings,
         )
+        self._telegram = TelegramClient(
+            bot_token=settings.telegram_bot_token,
+            chat_id=settings.telegram_chat_id,
+        )
         self._order_tracker = OrderTracker(
             db=self._db,
             alpaca_executor=self._alpaca_exec,
@@ -158,9 +163,19 @@ class OrchestratorAgent:
         """Async main loop: runs the decision cycle every 30 seconds."""
         heartbeat_counter = 0
         market_was_active = False
+        session_started_notified = False
 
         while self._running:
             market_active = self._session.is_stock_session_active()
+
+            # Notify Telegram when market session begins
+            if market_active and not session_started_notified:
+                session_started_notified = True
+                await self._telegram.send_message(
+                    "Trading session started\n"
+                    f"Symbols: {', '.join(self._stocks)}\n"
+                    "Waiting for data (first 50 bars)..."
+                )
 
             # Detect market close transition → EOD cleanup then exit
             if market_was_active and not market_active:
@@ -277,6 +292,12 @@ class OrchestratorAgent:
                 "Trade opened: %s | confidence=%.2f | sentiment=%.3f",
                 symbol, signal.confidence, sentiment.score,
             )
+            await self._telegram.send_message(
+                f"Trade opened\n"
+                f"{decision.order_spec.direction} {symbol} x{decision.order_spec.quantity}\n"
+                f"Entry: ${current_price:.2f}  SL: ${decision.order_spec.stop_loss:.2f}  TP: ${decision.order_spec.take_profit:.2f}\n"
+                f"Confidence: {signal.confidence:.0%}  Sentiment: {sentiment.score:+.2f}"
+            )
 
             # Trigger post-mortem check (non-blocking, async)
             asyncio.create_task(self._check_postmortem_async())
@@ -294,6 +315,12 @@ class OrchestratorAgent:
                 logger.info("EOD: %d Alpaca position(s) closed.", n)
             else:
                 logger.info("EOD: no open positions to close.")
+            balance = self._alpaca_exec.get_account_balance()
+            await self._telegram.send_message(
+                f"Session ended\n"
+                f"Positions closed: {n}\n"
+                f"Account equity: ${balance:,.2f}"
+            )
         except Exception as exc:
             logger.error("EOD close error: %s", exc)
 

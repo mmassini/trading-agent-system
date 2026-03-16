@@ -6,6 +6,7 @@ import asyncio
 import logging
 from datetime import timezone
 
+from alpaca.data.enums import DataFeed
 from alpaca.data.live import StockDataStream
 from alpaca.data.models import Bar
 
@@ -64,7 +65,7 @@ class AlpacaStreamHandler:
                 self._stream = StockDataStream(
                     self._api_key,
                     self._secret_key,
-                    feed="iex",  # "iex" (free) | "sip" (paid)
+                    feed=DataFeed.IEX,  # IEX = free tier; SIP = paid
                 )
                 self._stream.subscribe_bars(self._bar_handler, *self._symbols)
                 self._stream.run()
